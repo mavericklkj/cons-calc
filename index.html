@@ -404,6 +404,84 @@
     .breakdown-val.accent  { color: var(--accent); }
     .breakdown-val.accent2 { color: var(--accent2); }
  
+    /* TP Section */
+    .tp-section { margin-top: 20px; }
+    .tp-section.hidden { display: none; }
+ 
+    .tp-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+ 
+    .tp-result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+ 
+    .tp-result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      opacity: 0.35;
+      transition: opacity 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+ 
+    .tp-result-card.active {
+      opacity: 1;
+      border-color: rgba(0,153,255,0.35);
+      box-shadow: 0 0 18px rgba(0,153,255,0.07);
+    }
+ 
+    .tp-result-entry {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px;
+    }
+ 
+    .tp-result-pip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px; font-weight: 600;
+      color: var(--accent2);
+      letter-spacing: -0.02em; line-height: 1;
+    }
+ 
+    .tp-result-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--muted); margin-top: 4px;
+    }
+ 
+    .tp-total-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+ 
+    .tp-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+ 
+    .tp-stat-label {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 4px;
+    }
+ 
+    .tp-stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; font-weight: 600; color: var(--text);
+    }
+ 
+    .tp-stat-val.gold { color: #f0c040; }
+ 
     .footer {
       margin-top: 28px; text-align: center;
       font-size: 11px; color: var(--muted);
@@ -504,6 +582,57 @@
         <div class="breakdown-val accent" id="totalRiskVal">—</div>
       </div>
     </div>
+ 
+    <!-- TP Section (2-entry only) -->
+    <div class="tp-section hidden" id="tpSection">
+      <div class="divider" style="margin-top:24px;"><span>Take Profit</span></div>
+ 
+      <div class="tp-inputs">
+        <div class="field" style="margin-bottom:0">
+          <div class="field-label">
+            <span class="label-text">RR Ratio</span>
+          </div>
+          <div class="input-wrap">
+            <span class="prefix" style="font-size:11px;">RR</span>
+            <input type="number" id="rrInput" placeholder="2.4" min="0" step="0.1" value="2.4" oninput="calculate()" />
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <div class="field-label">
+            <span class="label-text">Entry Gap</span>
+          </div>
+          <div class="input-wrap">
+            <span class="prefix">pip</span>
+            <input type="number" id="gapInput" placeholder="0.0" min="0" step="0.1" oninput="calculate()" />
+          </div>
+        </div>
+      </div>
+ 
+      <div class="tp-result-grid">
+        <div class="tp-result-card" id="tp1Card">
+          <div class="tp-result-entry">Entry 1 TP</div>
+          <div class="tp-result-pip" id="tp1Val">—</div>
+          <div class="tp-result-sub">pips from entry 1</div>
+        </div>
+        <div class="tp-result-card" id="tp2Card">
+          <div class="tp-result-entry">Entry 2 TP</div>
+          <div class="tp-result-pip" id="tp2Val">—</div>
+          <div class="tp-result-sub">pips from entry 2</div>
+        </div>
+      </div>
+ 
+      <div class="tp-total-row">
+        <div class="tp-stat">
+          <div class="tp-stat-label">Total TP Pips</div>
+          <div class="tp-stat-val gold" id="totalTpVal">—</div>
+        </div>
+        <div class="tp-stat">
+          <div class="tp-stat-label">RR Target</div>
+          <div class="tp-stat-val gold" id="rrDisplay">—</div>
+        </div>
+      </div>
+    </div>
+ 
   </div>
  
   <div class="footer">made for the traders 📈</div>
@@ -585,6 +714,7 @@
       breakdown.classList.add('cols-2');
       avgItem.style.display = 'none';
       document.getElementById('totalConsItem').style.display = 'none';
+      document.getElementById('tpSection').classList.add('hidden');
       document.getElementById('sl2').value = '';
     } else {
       btn2.classList.add('active');
@@ -598,6 +728,7 @@
       breakdown.classList.add('cols-3');
       avgItem.style.display = '';
       document.getElementById('totalConsItem').style.display = '';
+      document.getElementById('tpSection').classList.remove('hidden');
     }
     calculate();
   }
@@ -653,6 +784,46 @@
       totalConsEl.textContent  = totalCons.toFixed(2);
       trEl.textContent         = '$' + fmt(risk);
       breakdown.classList.add('visible');
+ 
+      // Auto-fill entry gap from SL difference
+      const gapInput = document.getElementById('gapInput');
+      const autoGap  = Math.abs(sl2 - sl1);
+      if (document.activeElement !== gapInput) {
+        gapInput.value = autoGap.toFixed(1);
+      }
+ 
+      // TP Calculation
+      const rr  = parseFloat(document.getElementById('rrInput').value);
+      const gap = parseFloat(gapInput.value);
+      const tp1Card  = document.getElementById('tp1Card');
+      const tp2Card  = document.getElementById('tp2Card');
+      const tp1Val   = document.getElementById('tp1Val');
+      const tp2Val   = document.getElementById('tp2Val');
+      const totalTpEl = document.getElementById('totalTpVal');
+      const rrDispEl  = document.getElementById('rrDisplay');
+ 
+      const hasRR  = !isNaN(rr)  && rr  > 0;
+      const hasGap = !isNaN(gap) && gap >= 0;
+ 
+      if (hasRR && hasGap) {
+        const T  = (sl1 + sl2) * rr;
+        const G  = gap;
+        const d1 = (T - G) / 2;
+        const d2 = (T + G) / 2;
+        tp1Card.classList.add('active');
+        tp2Card.classList.add('active');
+        tp1Val.textContent  = d1.toFixed(1);
+        tp2Val.textContent  = d2.toFixed(1);
+        totalTpEl.textContent = T.toFixed(1) + ' pip';
+        rrDispEl.textContent  = rr.toFixed(1) + 'R';
+      } else {
+        tp1Card.classList.remove('active');
+        tp2Card.classList.remove('active');
+        tp1Val.textContent = '—';
+        tp2Val.textContent = '—';
+        totalTpEl.textContent = '—';
+        rrDispEl.textContent  = '—';
+      }
     }
   }
  
